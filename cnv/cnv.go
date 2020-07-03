@@ -1,12 +1,14 @@
 package cnv
 
-import "grandanno/core"
+import "grandanno/data"
 
+// Cnv CNV接口
 type Cnv interface {
-	GetVariant() core.Variant
-	GetTypo() string
+	GetVariant() data.Variant
+	GetType() string
 }
 
+// Cnvs CNV接口切片
 type Cnvs []Cnv
 
 func (cnvs Cnvs) Len() int {
@@ -14,13 +16,12 @@ func (cnvs Cnvs) Len() int {
 }
 
 func (cnvs Cnvs) Less(i, j int) bool {
-	starti, endi := cnvs[i].GetVariant().GetDigitalPosition()
-	startj, endj := cnvs[j].GetVariant().GetDigitalPosition()
+	starti, endi := cnvs[i].GetVariant().GetNumericalPosition()
+	startj, endj := cnvs[j].GetVariant().GetNumericalPosition()
 	if starti == startj {
 		return endi < endj
-	} else {
-		return starti < startj
 	}
+	return starti < startj
 }
 
 func (cnvs Cnvs) Swap(i, j int) {

@@ -2,12 +2,12 @@ package snv
 
 import (
 	"fmt"
-	"grandanno/core"
+	"grandanno/data"
 	"strings"
 )
 
-func (anno *Annotation) annoCdsChangeOfIns(pos int, alt core.Sequence, cdna core.Sequence, protein core.Sequence, isMt bool) {
-	var varCdna, varProtein core.Sequence
+func (anno *Annotation) annoCdsChangeOfIns(pos int, alt data.Sequence, cdna data.Sequence, protein data.Sequence, isMt bool) {
+	var varCdna, varProtein data.Sequence
 	varCdna = cdna.GetInsSequence(pos, alt)
 	if isMt {
 		varProtein = cdna.Translate(true)
@@ -54,9 +54,9 @@ func (anno *Annotation) annoCdsChangeOfIns(pos int, alt core.Sequence, cdna core
 			if start == end1 {
 				anno.AaChange = fmt.Sprintf(
 					"p.%s%d_%s%dins%s",
-					core.GetOne2Three(protein.GetChar(start-1)),
+					data.GetOne2Three(protein.GetChar(start-1)),
 					start,
-					core.GetOne2Three(protein.GetChar(start)),
+					data.GetOne2Three(protein.GetChar(start)),
 					start+1,
 					altAa.GetOne2Tree(),
 				)
@@ -74,16 +74,16 @@ func (anno *Annotation) annoCdsChangeOfIns(pos int, alt core.Sequence, cdna core
 				}
 				anno.AaChange = fmt.Sprintf(
 					"p.%s%d%sfs",
-					core.GetOne2Three(protein.GetChar(start)),
+					data.GetOne2Three(protein.GetChar(start)),
 					start+1,
-					core.GetOne2Three(varProtein.GetChar(start)),
+					data.GetOne2Three(varProtein.GetChar(start)),
 				)
 			}
 		}
 	}
 }
 
-func (anno *Annotation) annoInsForward(variant core.Variant, refgene core.Refgene, splicingLen int) {
+func (anno *Annotation) annoInsForward(variant data.Variant, refgene data.Refgene, splicingLen int) {
 	cdna, protein := refgene.Cdna, refgene.Protein
 	alt := variant.Alt
 	pos, regionCount := 0, len(refgene.Regions)
@@ -163,7 +163,7 @@ func (anno *Annotation) annoInsForward(variant core.Variant, refgene core.Refgen
 	}
 }
 
-func (anno *Annotation) annoInsBackward(variant core.Variant, refgene core.Refgene, splicingLen int) {
+func (anno *Annotation) annoInsBackward(variant data.Variant, refgene data.Refgene, splicingLen int) {
 	cdna, protein := refgene.Cdna, refgene.Protein
 	alt := variant.Alt
 	pos, regionCount := 0, len(refgene.Regions)
@@ -237,7 +237,9 @@ func (anno *Annotation) annoInsBackward(variant core.Variant, refgene core.Refge
 		}
 	}
 }
-func (anno *Annotation) AnnoIns(ins Snv, refgene core.Refgene, splicingLen int) {
+
+//AnnoIns 注释Insertion
+func (anno *Annotation) AnnoIns(ins Snv, refgene data.Refgene, splicingLen int) {
 	if refgene.Strand == '+' {
 		anno.annoInsForward(ins.GetVariant(), refgene, splicingLen)
 	} else {

@@ -2,124 +2,104 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"grandanno/cnv"
-	"grandanno/core"
-	"grandanno/prepare"
+	"grandanno/data"
 	"grandanno/snv"
 	"os"
 	"path"
 )
 
-type Parameter struct {
+// Param 参数
+var Param struct {
+	Program        string
 	Input          string
 	Ouput          string
 	Config         string
-	IsPrepare      bool
-	VarType        string
-	DatabasePath   string
+	DBPath         string
 	SplicingLength int
 	Help           bool
 }
 
-func (param Parameter) runPrepare() {
-	// mRNA
-	fmt.Printf("start read %s\n", core.Conf.File.Reference)
-	reference := make(core.Fasta)
-	reference.Read(core.Conf.File.Reference)
-	fmt.Printf("start read %s and %s\n", core.Conf.File.Refgene, core.Conf.File.EnsMt)
-	refgeneDict := make(prepare.RefgeneDict)
-	refgeneDict.Read(core.Conf.File.Refgene, core.Conf.Param.UpDownStream)
-	refgeneDict.Read(core.Conf.File.EnsMt, core.Conf.Param.UpDownStream)
-	fmt.Printf("start write %s\n", core.Conf.File.Mrna)
-	refgeneDict.Write(reference, core.Conf.File.Mrna)
-	// Reference Index
-	fmt.Printf("start init and write %s\n", core.Conf.File.Refidx)
-	refidxDict := make(prepare.RefidxDict)
-	refidxDict.Init(core.Conf.Param.RefidxStep)
-	refidxDict.Write(core.Conf.File.Refidx, refgeneDict)
+// runPrepare 数据文件预处理
+func runPrepare() {
+	referenceChan := make(chan data.Fasta, 0)
+	go data.ReadFastaFile(path.Join(Param.DBPath, data.Config.DBFile.Reference), referenceChan)
+	refgenesChan := make(chan data.Refgenes, 0)
+	refgeneFiles := []string{path.Join(Param.DBPath, data.Config.DBFile.Refgene), path.Join(Param.DBPath, data.Config.DBFile.EnsMt)}
+	go data.ReadRefgeneFiles(refgeneFiles, refgenesChan)
+	refidxMapChan := make(chan map[string]data.Refidxs, 0)
+	go data.InitRefidxMap(refidxMapChan)
+	refgenes := <-refgenesChan
+	data.WriteMrnaFile(path.Join(Param.DBPath, data.Config.DBFile.Mrna), refgenes, <-referenceChan)
+	data.WriteRefidxFile(path.Join(Param.DBPath, data.Config.DBFile.Refidx), <-refidxMapChan, refgenes.ToChromMap())
 }
 
-func (param Parameter) runAnnoGatkSnv() {
-	// NCBI Gene Info
-	fmt.Printf("start read %s\n", core.Conf.File.NcbiGene)
-	ncbiGene := core.NcbiGene{}
-	ncbiGene.Read(core.Conf.File.NcbiGene)
-	// Refgene
-	fmt.Printf("start read %s\n", core.Conf.File.Mrna)
-	mrna := make(core.Fasta)
-	mrna.Read(core.Conf.File.Mrna)
-	fmt.Printf("start read %s and %s\n", core.Conf.File.Refgene, core.Conf.File.EnsMt)
-	refgeneDict := make(core.RefgeneDict)
-	refgeneDict.Read(core.Conf.File.Refgene, ncbiGene)
-	refgeneDict.Read(core.Conf.File.EnsMt, ncbiGene)
-	refgeneDict.SetSequence(mrna)
-	refgeneDict.SetUpDownStream(core.Conf.Param.UpDownStream)
-	refidxs := make(core.Refidxs, 0)
-	refidxs.Read(core.Conf.File.Refidx)
-	// VCF
-	fmt.Printf("start read %s\n", param.Input)
-	snvs := make(snv.Snvs, 0)
-	snvs.ReadGatkVcfFile(param.Input)
-	// Annotate
-	fmt.Printf("start annoate and write out %s\n", param.Ouput)
-	results := make(snv.Results, 0)
-	results.RunAnno(snvs, refgeneDict, refidxs, core.Conf.Param.SplicingLen)
-	results.Write(param.Ouput)
+// runPrepare 注释GATK SNV
+func runAnnoGatkSnv() {
+	ncbiGeneChan := make(chan data.NcbiGene, 0)
+	go data.ReadNCBIGeneInfo(path.Join(Param.DBPath, data.Config.DBFile.NcbiGene), ncbiGeneChan)
+	refgenesChan := make(chan data.Refgenes, 0)
+	refgeneFiles := []string{path.Join(Param.DBPath, data.Config.DBFile.Refgene), path.Join(Param.DBPath, data.Config.DBFile.EnsMt)}
+	go data.ReadRefgeneFiles(refgeneFiles, refgenesChan)
+	mrnaChan := make(chan data.Fasta, 0)
+	go data.ReadFastaFile(path.Join(Param.DBPath, data.Config.DBFile.Mrna), mrnaChan)
+	refidxsChan := make(chan data.Refidxs)
+	go data.ReadRefidxFile(path.Join(Param.DBPath, data.Config.DBFile.Refidx), refidxsChan)
+	refgenes := <-refgenesChan
+	refgenes.SetEntrezidAndSequence(<-ncbiGeneChan, <-mrnaChan)
+	gatkSnvsChan := make(chan snv.Snvs)
+	go snv.ReadGatkVcfFile(Param.Input, gatkSnvsChan)
+	snv.RunAnnotation(<-gatkSnvsChan, refgenes.ToSnMap(), <-refidxsChan, Param.Ouput)
 }
 
-func (param Parameter) runAnnoXhmmCnv() {
-	// NCBI Gene Info
-	ncbiGene := core.NcbiGene{}
-	ncbiGene.Read(core.Conf.File.NcbiGene)
-	// Refgene
-	refgeneDict := make(core.RefgeneDict)
-	refgeneDict.Read(core.Conf.File.Refgene, ncbiGene)
-	refgeneDict.Read(core.Conf.File.EnsMt, ncbiGene)
-	refgeneDict.SetUpDownStream(core.Conf.Param.UpDownStream)
-	refidxs := make(core.Refidxs, 0)
-	refidxs.Read(core.Conf.File.Refidx)
-	// VCF
-	cnvDict := make(cnv.XhmmCnvDict, 0)
-	cnvDict.ReadXhmmVcfFile(param.Input)
-	// Annotate
-	for sample, cnvs := range cnvDict {
-		outJsonFile := path.Join(param.Ouput + "." + sample + ".json")
-		results := make(cnv.Results, 0)
-		results.RunAnno(cnvs, refgeneDict, refidxs)
-		results.Write(outJsonFile)
+// runPrepare 注释XHMM CNV
+func runAnnoXhmmCnv() {
+	ncbiGeneChan := make(chan data.NcbiGene, 0)
+	go data.ReadNCBIGeneInfo(path.Join(Param.DBPath, data.Config.DBFile.NcbiGene), ncbiGeneChan)
+	refgenesChan := make(chan data.Refgenes, 0)
+	refgeneFiles := []string{path.Join(Param.DBPath, data.Config.DBFile.Refgene), path.Join(Param.DBPath, data.Config.DBFile.EnsMt)}
+	go data.ReadRefgeneFiles(refgeneFiles, refgenesChan)
+	refidxsChan := make(chan data.Refidxs)
+	go data.ReadRefidxFile(path.Join(Param.DBPath, data.Config.DBFile.Refidx), refidxsChan)
+	xhmmCnvMapChan := make(chan map[string]cnv.Cnvs, 0)
+	go cnv.ReadXhmmVcfFile(Param.Input, xhmmCnvMapChan)
+	refgenes := <-refgenesChan
+	refidxs := <-refidxsChan
+	for sample, cnvs := range <-xhmmCnvMapChan {
+		outJSONFile := path.Join(Param.Ouput + "." + sample + ".json")
+		cnv.RunAnnotation(cnvs, refgenes.ToSnMap(), refidxs, outJSONFile)
 	}
 }
 
-var param Parameter
-
 func init() {
-	flag.BoolVar(&param.IsPrepare, "p", false, "Is Prepare Database")
-	flag.StringVar(&param.Input, "i", "", "Input File")
-	flag.StringVar(&param.Ouput, "o", "", "Output File")
-	flag.StringVar(&param.Config, "c", "", "Config YAML File")
-	flag.StringVar(&param.VarType, "t", "gatk_snv", "The Source of variants:[gatk_snv, xhmm_cnv]")
-	flag.StringVar(&param.DatabasePath, "d", "./database", "Directory Path of Database")
-	flag.IntVar(&param.SplicingLength, "s", 15, "Length of Splicing Region")
-	flag.BoolVar(&param.Help, "h", false, "Help")
+	flag.StringVar(&Param.Program, "p", "gatk_snv", "The Program which is run:[prepare, gatk_snv, xhmm_cnv]")
+	flag.StringVar(&Param.Input, "i", "", "Input File")
+	flag.StringVar(&Param.Ouput, "o", "", "Output File")
+	flag.StringVar(&Param.Config, "c", "", "Config YAML File")
+	flag.StringVar(&Param.DBPath, "d", "./database", "Directory Path of Database")
+	flag.IntVar(&Param.SplicingLength, "s", 15, "Length of Splicing Region")
+	flag.BoolVar(&Param.Help, "h", false, "Help")
 	flag.Parse()
-	if !param.IsPrepare && (len(param.Input) == 0 || len(param.Ouput) == 0 || len(param.Config) == 0) {
+	if Param.Help {
+		flag.Usage()
+		os.Exit(0)
+	}
+	if len(Param.Input) == 0 || len(Param.Ouput) == 0 || len(Param.Config) == 0 {
 		flag.Usage()
 		os.Exit(-1)
 	}
-	core.Conf.Read(param.Config)
+	data.ReadConfigYAML(Param.Config)
+	data.Config.Param.SplicingLen = Param.SplicingLength
 }
 
 func main() {
-	switch {
-	case param.Help:
-		flag.Usage()
-	case param.IsPrepare:
-		param.runPrepare()
-	case param.VarType == "gatk_snv":
-		param.runAnnoGatkSnv()
-	case param.VarType == "xhmm_snv":
-		param.runAnnoXhmmCnv()
+	switch Param.Program {
+	case "prepare":
+		runPrepare()
+	case "gatk_snv":
+		runAnnoGatkSnv()
+	case "xhmm_snv":
+		runAnnoXhmmCnv()
 	default:
 		flag.Usage()
 	}

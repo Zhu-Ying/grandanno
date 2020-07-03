@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -27,20 +28,6 @@ func GetChromByName(name string) (order int, length int) {
 		}
 	}
 	panic(errors.New("Not Found: " + name))
-}
-
-// GetGeneEntrezID 通过Gene symbol获取Extrez ID
-func GetGeneEntrezID(symbol string) int {
-	if entrezID, ok := NcbiGene.Symbol[symbol]; ok {
-		return entrezID
-	}
-	if entrezID, ok := NcbiGene.SymbolFna[symbol]; ok {
-		return entrezID
-	}
-	if entrezID, ok := NcbiGene.Synonyms[symbol]; ok {
-		return entrezID
-	}
-	return -1
 }
 
 // ReadFile 读取文件全部内容
@@ -70,12 +57,39 @@ func ReadFile(file string) (lines [][]byte, err error) {
 
 // Strs2Ints 批量字符串转整形
 func Strs2Ints(strs []string) (ints []int, err error) {
-	for _, s := range strs {
-		i, err := strconv.Atoi(s)
-		if err != nil {
-			return []int{}, err
+	ints = make([]int, len(strs))
+	for i, s := range strs {
+		if v, e := strconv.Atoi(s); e != nil {
+			ints[i] = -1
+			err = e
+		} else {
+			ints[i] = v
 		}
-		ints = append(ints, i)
 	}
-	return ints, nil
+	return
+}
+
+// Strs2Float 批量字符串转浮点型
+func Strs2Float(strs []string) (floats []float64, err error) {
+	floats = make([]float64, len(strs))
+	for i, s := range strs {
+		if v, e := strconv.ParseFloat(s, 32); e != nil {
+			floats[i] = float64(-1)
+			err = e
+		} else {
+			floats[i] = v
+		}
+	}
+	return
+}
+
+// ConvertToJSON 装换为JSON字符串
+func ConvertToJSON(data interface{}) (string, error) {
+	var buffer bytes.Buffer
+	jsonEncoder := json.NewEncoder(&buffer)
+	jsonEncoder.SetEscapeHTML(false)
+	if err := jsonEncoder.Encode(data); err != nil {
+		return "", err
+	}
+	return buffer.String(), nil
 }

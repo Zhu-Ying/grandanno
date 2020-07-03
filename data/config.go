@@ -6,6 +6,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// ChromMaxLen 最大染色体长度
+var ChromMaxLen int = 1000
+
 // Config 配置
 var Config struct {
 	DBFile struct {
@@ -17,23 +20,39 @@ var Config struct {
 		Exon      string `yaml:"exon"`
 		Mrna      string `yaml:"mrna"`
 		Refidx    string `yaml:"refidx"`
-	} `yaml: db_file`
+	} `yaml:"db_file"`
 	Param struct {
 		UpDownStream int `yaml:"up_down_stream"`
 		RefidxStep   int `yaml:"refidx_step"`
 		SplicingLen  int `yaml:"splicing_len"`
-	} `yaml: parameters`
+	} `yaml:"param"`
 	Chrom []struct {
 		Name   string `yaml:"name"`
 		Length int    `yaml:"length"`
-	} `yaml: chrom`
+	} `yaml:"chrom"`
 }
 
 // ReadConfigYAML 读取YAML配置文件
-func ReadConfigYAML(yamlFile string) (err error) {
+func ReadConfigYAML(yamlFile string) error {
 	buffer, err := ioutil.ReadFile(yamlFile)
 	if err != nil {
 		return err
 	}
-	return yaml.Unmarshal(buffer, &Config)
+	err = yaml.Unmarshal(buffer, &Config)
+	if err != nil {
+		return err
+	}
+	maxLen := 0
+	for _, chrom := range Config.Chrom {
+		if maxLen < chrom.Length {
+			maxLen = chrom.Length
+		}
+	}
+	for {
+		if ChromMaxLen/maxLen < 1 {
+			break
+		}
+		ChromMaxLen *= 1000
+	}
+	return nil
 }

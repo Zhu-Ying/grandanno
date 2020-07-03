@@ -1,12 +1,14 @@
 package snv
 
-import "grandanno/core"
+import "grandanno/data"
 
+// Snv SNV接口
 type Snv interface {
-	GetVariant() core.Variant
-	GetTypo() string
+	GetVariant() data.Variant
+	GetType() string
 }
 
+// Snvs SNV切片
 type Snvs []Snv
 
 func (snvs Snvs) Len() int {
@@ -14,13 +16,12 @@ func (snvs Snvs) Len() int {
 }
 
 func (snvs Snvs) Less(i, j int) bool {
-	starti, endi := snvs[i].GetVariant().GetDigitalPosition()
-	startj, endj := snvs[j].GetVariant().GetDigitalPosition()
+	starti, endi := snvs[i].GetVariant().GetNumericalPosition()
+	startj, endj := snvs[j].GetVariant().GetNumericalPosition()
 	if starti == startj {
 		return endi < endj
-	} else {
-		return starti < startj
 	}
+	return starti < startj
 }
 
 func (snvs Snvs) Swap(i, j int) {

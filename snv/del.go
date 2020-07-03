@@ -2,11 +2,11 @@ package snv
 
 import (
 	"fmt"
-	"grandanno/core"
+	"grandanno/data"
 	"strings"
 )
 
-func (anno Annotation) annoCdsChangeOfDel(lenL int, lenR int, cdna core.Sequence, protein core.Sequence, isMt bool) {
+func (anno Annotation) annoCdsChangeOfDel(lenL int, lenR int, cdna data.Sequence, protein data.Sequence, isMt bool) {
 	varCdna := cdna.GetDelSequence(lenL, lenR)
 	varProtein := varCdna.Translate(isMt)
 	lenl, lenr := 0, 0
@@ -54,22 +54,22 @@ func (anno Annotation) annoCdsChangeOfDel(lenL int, lenR int, cdna core.Sequence
 		}
 		if start == end2+1 {
 			if start == end1 {
-				anno.AaChange = fmt.Sprintf("p.%s%ddel", core.GetOne2Three(protein.GetChar(start-1)), start)
+				anno.AaChange = fmt.Sprintf("p.%s%ddel", data.GetOne2Three(protein.GetChar(start-1)), start)
 			} else {
 				anno.AaChange = fmt.Sprintf(
 					"p.%s%d_%s%ddel",
-					core.GetOne2Three(protein.GetChar(start-1)),
+					data.GetOne2Three(protein.GetChar(start-1)),
 					start,
-					core.GetOne2Three(protein.GetChar(end1-1)),
+					data.GetOne2Three(protein.GetChar(end1-1)),
 					end1,
 				)
 			}
 		} else {
 			anno.AaChange = fmt.Sprintf(
 				"p.%s%d_%s%dinsdel%s",
-				core.GetOne2Three(protein.GetChar(start-1)),
+				data.GetOne2Three(protein.GetChar(start-1)),
 				start,
-				core.GetOne2Three(protein.GetChar(end1-1)),
+				data.GetOne2Three(protein.GetChar(end1-1)),
 				end1,
 				varProtein.GetSeq(start-1, end2-start+1).GetOne2Tree(),
 			)
@@ -79,10 +79,10 @@ func (anno Annotation) annoCdsChangeOfDel(lenL int, lenR int, cdna core.Sequence
 		if start > varProtein.GetLen() {
 			anno.Function = "del_nonframeshift_stoploss"
 			anno.AaChange = fmt.Sprintf(
-				"p.%s%d_%s%s%ddel",
-				core.GetOne2Three(protein.GetChar(start-1)),
+				"p.%s%d_%s%ddel",
+				data.GetOne2Three(protein.GetChar(start-1)),
 				start,
-				core.GetOne2Three(protein[lenp-1]),
+				data.GetOne2Three(protein[lenp-1]),
 				lenp,
 			)
 		} else {
@@ -95,15 +95,15 @@ func (anno Annotation) annoCdsChangeOfDel(lenL int, lenR int, cdna core.Sequence
 			}
 			anno.AaChange = fmt.Sprintf(
 				"p.%s%d%sfs",
-				core.GetOne2Three(protein.GetChar(start-1)),
+				data.GetOne2Three(protein.GetChar(start-1)),
 				start,
-				core.GetOne2Three(varProtein.GetChar(start-1)),
+				data.GetOne2Three(varProtein.GetChar(start-1)),
 			)
 		}
 	}
 }
 
-func (anno Annotation) annoIntronSplicingOfDel(variant core.Variant, region core.Region, lenL int, ref core.Sequence, side byte, strand byte) {
+func (anno Annotation) annoIntronSplicingOfDel(variant data.Variant, region data.Region, lenL int, ref data.Sequence, side byte, strand byte) {
 	var distance1, distance2, length int
 	var flag byte
 	if side == 'l' {
@@ -133,7 +133,7 @@ func (anno Annotation) annoIntronSplicingOfDel(variant core.Variant, region core
 	}
 }
 
-func (anno *Annotation) annoDelForward(variant core.Variant, refgene core.Refgene, splicingLen int) {
+func (anno *Annotation) annoDelForward(variant data.Variant, refgene data.Refgene, splicingLen int) {
 	cdna, protein, ref := refgene.Cdna, refgene.Protein, variant.Ref
 	lenL, lenR := 0, 0
 	regionCount := len(refgene.Regions)
@@ -283,7 +283,7 @@ func (anno *Annotation) annoDelForward(variant core.Variant, refgene core.Refgen
 	}
 }
 
-func (anno *Annotation) annoDelBackward(variant core.Variant, refgene core.Refgene, splicingLen int) {
+func (anno *Annotation) annoDelBackward(variant data.Variant, refgene data.Refgene, splicingLen int) {
 	cdna, protein, ref := refgene.Cdna, refgene.Protein, variant.Ref
 	lenL, lenR := 0, 0
 	regionCount := len(refgene.Regions)
@@ -437,7 +437,9 @@ func (anno *Annotation) annoDelBackward(variant core.Variant, refgene core.Refge
 		anno.annoCdsChangeOfDel(lenL, lenR, cdna, protein, refgene.Chrom == "MT")
 	}
 }
-func (anno *Annotation) AnnoDel(del Snv, refgene core.Refgene, splicingLen int) {
+
+// AnnoDel 注释Deletion
+func (anno *Annotation) AnnoDel(del Snv, refgene data.Refgene, splicingLen int) {
 	if refgene.Strand == '+' {
 		anno.annoDelForward(del.GetVariant(), refgene, splicingLen)
 	} else {

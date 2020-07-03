@@ -2,12 +2,12 @@ package snv
 
 import (
 	"fmt"
-	"grandanno/core"
+	"grandanno/data"
 	"strings"
 )
 
-func (anno *Annotation) annoCdsChangeOfSnp(pos int, alt byte, cdna core.Sequence, protein core.Sequence, isMt bool) {
-	var varCdna, varProtein core.Sequence
+func (anno *Annotation) annoCdsChangeOfSnp(pos int, alt byte, cdna data.Sequence, protein data.Sequence, isMt bool) {
+	var varCdna, varProtein data.Sequence
 	varCdna = cdna.GetSnpSequence(pos, alt)
 	varProtein = varCdna.Translate(isMt)
 	for i := 0; i < cdna.GetLen(); i++ {
@@ -25,13 +25,13 @@ func (anno *Annotation) annoCdsChangeOfSnp(pos int, alt byte, cdna core.Sequence
 				}
 			}
 			anno.NaChange = fmt.Sprintf("c.%d%c>%c", i+1, na1, na2)
-			anno.AaChange = fmt.Sprintf("p.%s%d%s", core.GetOne2Three(aa1), j+1, core.GetOne2Three(aa2))
+			anno.AaChange = fmt.Sprintf("p.%s%d%s", data.GetOne2Three(aa1), j+1, data.GetOne2Three(aa2))
 			break
 		}
 	}
 }
 
-func (anno *Annotation) annoSnpForward(variant core.Variant, refgene core.Refgene, splicingLen int) {
+func (anno *Annotation) annoSnpForward(variant data.Variant, refgene data.Refgene, splicingLen int) {
 	cdna, protein := refgene.Cdna, refgene.Protein
 	ref, alt := variant.Ref.GetChar(0), variant.Alt.GetChar(0)
 	pos, regionCount := 0, len(refgene.Regions)
@@ -111,7 +111,7 @@ func (anno *Annotation) annoSnpForward(variant core.Variant, refgene core.Refgen
 
 }
 
-func (anno Annotation) annoSnpBackward(variant core.Variant, refgene core.Refgene, splicingLen int) {
+func (anno Annotation) annoSnpBackward(variant data.Variant, refgene data.Refgene, splicingLen int) {
 	cdna, protein := refgene.Cdna, refgene.Protein
 	ref, alt := variant.Ref[0], variant.Alt[0]
 	pos, regionCount := 0, len(refgene.Regions)
@@ -186,7 +186,8 @@ func (anno Annotation) annoSnpBackward(variant core.Variant, refgene core.Refgen
 	}
 }
 
-func (anno *Annotation) AnnoSnp(snp Snv, refgene core.Refgene, splicingLen int) {
+// AnnoSnp 注释SNP
+func (anno *Annotation) AnnoSnp(snp Snv, refgene data.Refgene, splicingLen int) {
 	if refgene.Strand == '+' {
 		anno.annoSnpForward(snp.GetVariant(), refgene, splicingLen)
 	} else {

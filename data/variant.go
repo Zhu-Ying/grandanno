@@ -4,25 +4,29 @@ import (
 	"fmt"
 )
 
+// Variant 变异
 type Variant struct {
-	Chrom string
-	Start int
-	End   int
-	Ref   Sequence
-	Alt   Sequence
+	Chrom string   `json:"chrom"`
+	Start int      `json:"start"`
+	End   int      `json:"end"`
+	Ref   Sequence `json:"ref"`
+	Alt   Sequence `json:"alt"`
 }
 
+// GetSn 获取变异编号
 func (variant Variant) GetSn() string {
 	return fmt.Sprintf("%s:%d:%d:%s:%s", variant.Chrom, variant.Start, variant.End, variant.Ref, variant.Alt)
 }
 
-func (variant Variant) GetDigitalPosition() (int, int) {
-	order, _ := Conf.Chrom.GetByName(variant.Chrom)
-	start := order*1e9 + variant.Start
-	end := order*1e9 + variant.End
+// GetNumericalPosition 获取数值位置
+func (variant Variant) GetNumericalPosition() (int, int) {
+	order, _ := GetChromByName(variant.Chrom)
+	start := order*ChromMaxLen + variant.Start
+	end := order*ChromMaxLen + variant.End
 	return start, end
 }
 
+// ConvertSnv 标准化变异信息
 func (variant *Variant) ConvertSnv() {
 	if variant.Chrom == "M" {
 		variant.Chrom = "MT"
