@@ -24,7 +24,7 @@ var CorbaCMD *cobra.Command
 // prepareCMD 数据文件预处理
 func prepareCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "Pre",
+		Use:   "pre",
 		Short: "预处理",
 		Long:  "对数据库文件进行预处理得到注释所需文件",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -48,7 +48,7 @@ func prepareCMD() *cobra.Command {
 // annoGATKSNVCMD 注释GATK4 Call SNV的VCF结果文件
 func annoGATKSNVCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "SNV",
+		Use:   "snv",
 		Short: "SNV注释(GATK4)",
 		Long:  "注释GATK4 Call SNV的VCF结果文件",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -79,7 +79,7 @@ func annoGATKSNVCMD() *cobra.Command {
 // annoXHMMCNVCMD 注释XHMM Call CNV的VCF结果文件
 func annoXHMMCNVCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "CNV",
+		Use:   "cnv",
 		Short: "CNV注释(XHMM)",
 		Long:  "注释XHMM Call CNV的VCF结果文件",
 		Run: func(cmd *cobra.Command, args []string) {
